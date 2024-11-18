@@ -1,0 +1,197 @@
+# **Step 1: Import necessary libraries**
+
+
+# These libraries are essential for data manipulation, visualization, and statistical analysis.
+
+import io
+from google.colab import files  # To upload files in the Colab environment
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import scipy.stats as sp
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+
+
+# **Step 2: Upload the Dataset**
+
+
+# Use the `files.upload()` method to upload your CSV file into the Colab notebook.
+
+data = files.upload()
+
+# **Step 3: Read the uploaded CSV file into a DataFrame**
+
+df = pd.read_csv('output.csv')
+
+# **Step 4: Display the first few rows of the dataset to understand its structure**
+
+print(df.head())
+
+# **Step 5: Check the data types of each column to understand the kind of data you're dealing with**
+
+print(df.dtypes)
+
+# **Step 6: Clean the data by removing any unnecessary columns**
+# Here, we are removing the first column, assuming it might be an index or not needed.
+
+df = df.iloc[:, 1:]
+
+# **Step 7: Rename columns for easier reference**
+
+headers = [
+    "symboling", "normalized-losses", "make", "fuel-type", "aspiration",
+    "num-of-doors", "body-style", "drive-wheels", "engine-location",
+    "wheel-base", "length", "width", "height", "curb-weight",
+    "engine-type", "num-of-cylinders", "engine-size", "fuel-system",
+    "bore", "stroke", "compression-ratio", "horsepower", "peak-rpm",
+    "city-mpg", "highway-mpg", "price"
+]
+df.columns = headers
+
+# **Step 8: Display the updated DataFrame to confirm changes**
+
+print(df.head())
+
+# **Step 9: Assign the cleaned DataFrame to a new variable for easier reference**
+
+data = df
+
+# **Step 10: Check for missing values in the dataset**
+
+print(data.isna().any())  # Using `isna()` to find NaN values
+print(data.isnull().any())  # Using `isnull()` for missing values check
+
+# **Step 11: Convert 'city-mpg' to liters per 100km and rename the column**
+
+data['city-mpg'] = 235 / data['city-mpg']
+data.rename(columns={'city-mpg': 'city-L/100km'}, inplace=True)
+
+
+# **Step 12: Verify the columns to ensure the renaming was successful**
+
+print(data.columns)
+
+# **Step 13: Check the data types again to confirm any necessary conversions**
+
+print(data.dtypes)
+
+# **Step 14: Explore unique values in the 'price' column to identify any issues**
+
+print(data['price'].unique())
+
+
+# **Step 15: Handle missing or invalid data in the 'price' column**
+# Here, we remove rows where 'price' contains the value '?' and convert 'price' to integer
+
+data = data[data['price'] != '?']
+data['price'] = data['price'].astype(int)
+
+# **Step 16: Verify the data types to ensure 'price' is now an integer**
+
+print(data.dtypes)
+
+
+# **Step 17: Normalize the 'length', 'width', and 'height' columns**
+
+data['length'] = data['length'] / data['length'].max()
+data['width'] = data['width'] / data['width'].max()
+data['height'] = data['height'] / data['height'].max()
+
+# **Step 18: Perform binning on the 'price' column to categorize it into groups**
+
+bins = np.linspace(min(data['price']), max(data['price']), 4)
+group_names = ['Low', 'Medium', 'High']
+data['price-binned'] = pd.cut(data['price'], bins, labels=group_names, include_lowest=True)
+
+# **Step 19: Display the binned 'price' column to check the binning**
+
+print(data['price-binned'])
+
+# **Step 20: Plot a histogram of the binned prices to visualize the distribution**
+
+plt.hist(data['price-binned'])
+plt.xlabel('Price Category')
+plt.ylabel('Frequency')
+plt.title('Histogram of Price Binned Categories')
+plt.show()
+
+# **Step 21: Convert categorical variables to numerical using one-hot encoding**
+
+print(pd.get_dummies(data['fuel-type']).head())
+
+# **Step 22: Perform a descriptive analysis of the dataset**
+# This will provide statistical information, skipping NaN values
+
+print(data.describe())
+
+# **Step 23: Create a box plot using matplotlib to visualize the 'price' distribution**
+
+plt.boxplot(data['price'])
+plt.title('Box Plot of Price')
+plt.show()
+
+# **Step 24: Use seaborn to create a clearer box plot of 'price' by 'drive-wheels'**
+
+sns.boxplot(x='drive-wheels', y='price', data=data)
+plt.title('Box Plot of Price by Drive Wheels')
+plt.show()
+
+# **Step 25: Plot a scatter plot to examine the relationship between engine size and price**
+
+plt.scatter(data['engine-size'], data['price'])
+plt.title('Scatterplot of Engine Size vs. Price')
+plt.xlabel('Engine Size')
+plt.ylabel('Price')
+plt.grid(True)
+plt.show()
+
+# **Step 26: Group the data by 'drive-wheels' and 'body-style' for further analysis**
+
+test = data[['drive-wheels', 'body-style', 'price']]
+data_grp = test.groupby(['drive-wheels', 'body-style'], as_index=False).mean()
+
+# **Step 27: Display the grouped data to see the average prices**
+
+print(data_grp)
+
+# **Step 28: Create a pivot table for visualization purposes**
+
+data_pivot = data_grp.pivot(index='drive-wheels', columns='body-style')
+
+# **Step 29: Plot a heatmap to visualize the pivoted data**
+
+plt.pcolor(data_pivot, cmap='RdBu')
+plt.colorbar()
+plt.title('Heatmap of Drive Wheels and Body Style')
+plt.show()
+
+# **Step 30: Perform Analysis of Variance (ANOVA) between car makes to test for significant differences**
+
+data_annova = data[['make', 'price']]
+grouped_annova = data_annova.groupby(['make'])
+annova_results = sp.stats.f_oneway(
+    grouped_annova.get_group('honda')['price'],
+    grouped_annova.get_group('subaru')['price']
+)
+print("ANOVA results (F-test, p-value):", annova_results)
+
+
+# **Step 31: Perform a correlation analysis between engine size and price**
+
+sns.regplot(x='engine-size', y='price', data=data)
+plt.ylim(0,)
+plt.title('Regression Plot of Engine Size vs. Price')
+plt.show()
+
+# **Step 32: Box Plot for Categorical Variables**
+
+plt.figure(figsize=(8, 6))
+sns.boxplot(x='fuel-type', y='price', data=data)
+plt.title('Box Plot of Price by Fuel Type')
+plt.xlabel('Fuel Type')
+plt.ylabel('Price')
+plt.show()
